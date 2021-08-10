@@ -1,0 +1,62 @@
+#!/bin/sh
+#
+# A very simple aur downloader written in sh
+
+aurdir=$HOME/.local/share/aurposix/
+oldpwd=$(pwd)
+
+case $1 in
+	install )
+	if [ ! "$(curl --silent "https://aur.archlinux.org/rpc/?v=5&type=info&arg[]=$2" |  jq -r -c '.results[] | .Name,.Description,.Version' | paste -d'\n' /dev/null - - -)" = ""  ]; then
+		if [ ! "$(find $2)" = "" ]; then
+			read -p "Package installed, do you want to cleanbuild? Y/n " yesno
+			case $yesno in
+				y | Y | yes | Yes )
+					git clone https://aur.archlinux.org/$2.git $aurdir$2
+					cd $aurdir$2
+					makepkg -sriC
+				;;
+				n | N | no | No )
+					cd $oldpwd
+					exit 0
+				;;
+			esac
+		else
+			git clone https://aur.archlinux.org/$2.git $aurdir$2
+			cd $aurdir$2
+			makepkg -sri
+		fi
+	else
+		echo "Error: $2 not found"
+	fi
+	;;
+	search )
+		curl --silent "https://aur.archlinux.org/rpc/?v=5&type=search&arg=$2" |  jq -r -c '.results[] | .Name,.Description,.Version' | paste -d'\n' /dev/null - - -
+	;;
+	pkgsearch )
+		curl --silent "https://aur.archlinux.org/rpc/?v=5&type=info&arg[]=$2" |  jq --monochrome-output -r -c '.results[] | .Name,.Description,.Version,.Depends'
+	;;
+	update )
+		read -p "Warning, this will rebuild all your aur packages, are you sure you want to continue? Y/n " yesno
+		case $yesno in
+			y | Y | yes | Yes )
+				for pkgdir in $aurdir*; do
+					cd $pkgdir
+					if [ ! "$(git pull)" = "Already up to date." ]; then
+						makepkg -sriC
+					else
+						echo "$(echo $pkgdir | cut -c35-): Up to date"
+					fi
+					cd $oldpwd
+				done
+			;;
+			n | N | no | No )
+				exit 0
+			;;
+		esac
+	;;
+	*)
+		echo "Error: \"$1\" not an option"
+	;;
+esac
+cd $oldpwd
