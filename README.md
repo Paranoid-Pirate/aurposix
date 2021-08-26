@@ -1,5 +1,8 @@
 # aursh
 
+**WARNING**  
+if you do not have /bin/sh linked to a posix compliant shell like dash the command will not output as expected. However it will still work
+
 A (hopefullly) posix aur helper #!/bin/sh script 
 
 Posix is difficult sometimes so I really don't know if its truly compliant but feel free to tell me.
