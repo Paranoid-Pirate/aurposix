@@ -1,0 +1,115 @@
+#!/bin/sh
+#
+# A very simple aur downloader written in sh
+
+# Program variables ( User should edit these )
+aurdir=$HOME/.local/share/aursh
+
+# Program variables ( User shouldn't edit these )
+prevpwd=$PWD
+
+# Functions
+
+usage(){
+	echo "USAGE: aursh [OPTION...] package"	
+	echo "Options:\n"
+	echo "help     \tbrings up this menu"
+	echo "install  \tinstalls a package from the aur"
+	echo "uninstall\tuninstalls a package from the aur"
+	echo "search   \tsearches for the aur"
+	echo "pkgsearch\tsearches the aur for a specific package"
+	echo "update   \tcleanbuilds a given package if not up to date,"
+	echo "cleanbuild\tcleanbuilds a package."
+	echo "\t\tor it will recursively update all package if none is given"
+	exit 0
+}
+
+packagecheck(){
+	[ "$1" = "" ] && echo "Error: no package inputted\n" && usage
+}
+
+install(){
+	packagecheck "$1"
+	# makedeps=$(curl --silent "https://aur.archlinux.org/rpc/?v=5&type=info&arg[]=$1" |  jq --monochrome-output -r -c '.results[] | .MakeDepends' | tr -d '[]"' | tr , " ")
+	if [ ! "$(curl --silent "https://aur.archlinux.org/rpc/?v=5&type=info&arg[]=$1" |  jq -r -c '.results[] | .Name,.Description,.Version')" = "" ]; then
+		[ ! "$(pacman -Qm $1)" = "" ] && cd $oldpwd && echo "Error: package already installed\n" && usage
+		git clone https://aur.archlinux.org/$1.git $aurdir/$1
+		cd $aurdir/$1
+		makepkg -sriC
+	else
+		echo "Error: package not found\n" && usage
+	fi
+}
+
+uninstall(){
+	packagecheck "$1"
+	[ "$(pacman -Qm $1)" = "" ] && cd $oldpwd && echo "Error: package not installed\n" && usage
+	cd $aurdir
+	sudo rm -r $1
+	sudo pacman -Rnus $1
+}
+
+update(){
+	if [ ! "$1" = "" ]; then
+		[ "$(find $aurdir/$1)" = "" ] && cd $oldpwd && echo "Error: package not installed\n" && usage
+		cd $aurdir/$1
+		[ "$(git pull)" = "Already up to date." ] && cd $oldpwd && echo "Already up to date" && exit 0 
+		makepkg -sriC
+	else
+		read -p "Warning: this will rebuild all of your out of date packages, are you sure you want to continue Y/n " yesno
+		[ "$yesno" = "n" ] || [ "$yesno" = "N" ] || [ "$yesno" = "no" ] || [ "$yesno" = "No" ] && cd $oldpwd && exit 1
+		for pkgdir in $aurdir/*; do
+			cd $pkgdir
+			if [ ! "$(git pull)" = "Already up to date." ]; then
+				makepkg -sriC
+			else
+				echo "$(echo ${pkgdir#$aurdir/}): Up To Date" 
+			fi
+		done
+	fi
+}
+
+cleanbuild(){
+	packagecheck "$1"
+	cd $aurdir/$1
+	makepkg -sriC
+}
+
+search(){
+	packagecheck "$1"
+	curl --silent "https://aur.archlinux.org/rpc/?v=5&type=search&arg=$1" |  jq -r -c '.results[] | .Name,.Description,.Version' | paste -d'\n' /dev/null - - -
+}
+
+pkgsearch(){
+	packagecheck "$1"
+	curl --silent "https://aur.archlinux.org/rpc/?v=5&type=info&arg[]=$1" |  jq --monochrome-output -r -c '.results[] | .Name,.Description,.Version,.Depends' | tr -d '"[]' | tr , " "
+}
+
+case $1 in
+	help )
+		usage
+	;;
+	install )
+		install "$2"
+	;;
+	uninstall )
+		uninstall "$2"
+	;;
+	search )
+		search "$2"
+	;;
+	pkgsearch )
+		pkgsearch "$2"
+	;;
+	update )
+		update "$2"
+	;;
+	cleanbuild )
+		cleanbuild "$2"
+	;;
+	*)
+		echo "Error: $1 not an option\n" && usage
+	;;
+esac
+
+cd $oldpwd
