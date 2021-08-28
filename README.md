@@ -1,7 +1,6 @@
 # aursh
 
-**WARNING**  
-if you do not have /bin/sh linked to a posix compliant shell like dash the command will not output as expected. However it will still work
+**now with colors**
 
 A (hopefullly) posix aur helper #!/bin/sh script 
 
@@ -15,7 +14,7 @@ $ cd aursh
 $ chmod +x aursh
 ```
 
-Then you can just move aurposix to any of your `$PATH` directories
+Then you can just move aursh to any of your `$PATH` directories
 
 ## Configuration
 
