@@ -2,7 +2,7 @@
 #
 # aursh, a shell script to download from the aur
 
-AURDIR="$HOME/.local/share/aursh"
+AURDIR=${AURDIR:="$HOME/.local/share/aursh"}
 
 prev_pwd="$PWD"
 
