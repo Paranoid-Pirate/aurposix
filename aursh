@@ -11,6 +11,8 @@ cyan="\033[36m"
 light_red="\033[91m"
 light_green="\033[92m"
 
+prev_pwd="$PWD"
+
 # Checking if $AURDIR is set to a dir that exists, and printing an error if not
 [ ! -d "$AURDIR" ] && mkdir -p "$AURDIR"
 
@@ -157,4 +159,4 @@ for arg in "$@"; do case "$1" in
 		;;
 	esac done
 
-cd - >/dev/null || cd_error
+cd "$prev_pwd" || cd_error
